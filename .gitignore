@@ -332,3 +332,10 @@ ASALocalRun/
 
 # MFractors (Xamarin productivity tool) working folder 
 .mfractor/
+
+# Visual Studio Code files
+@
+.vscode/
+
+# Azure Machine Learning Workspace files
+.azureml/
