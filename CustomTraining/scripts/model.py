@@ -13,10 +13,11 @@ class TFBertForMultiClassification(TFBertPreTrainedModel):
         self.num_labels = config.num_labels
         self.bert = TFBertMainLayer(config, name='bert')
         self.dropout = tf.keras.layers.Dropout(config.hidden_dropout_prob)
-        self.classifier = tf.keras.layers.Dense(config.num_labels,
-                                                kernel_initializer=get_initializer(config.initializer_range),
-                                                name='classifier',
-                                                activation='softmax')
+        self.classifier = tf.keras.layers.Dense(
+            config.num_labels,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name='classifier', activation='softmax'
+        )
 
     def call(self, inputs, **kwargs):
         outputs = self.bert(inputs, **kwargs)

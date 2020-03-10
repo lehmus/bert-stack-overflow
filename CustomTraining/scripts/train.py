@@ -17,13 +17,17 @@ run = Run.get_context()
 
 # Define input arguments
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('max_seq_length', 128, 'Maximum sequence length of input sentences.')
-flags.DEFINE_integer('batch_size', 32, 'Batch size for training.', lower_bound=0)
-flags.DEFINE_float('learning_rate', 3e-5, 'Learning rate for training.')
+flags.DEFINE_string('pretrained_model', 'bert-base-cased', 'Name of the pretrained BERT model.')
+flags.DEFINE_string('training_path', './data/train.csv', 'Path of training dataset on the remote datastore.')
+flags.DEFINE_string('validation_path', './data/valid.csv', 'Path of validation dataset on the remote datastore.')
+flags.DEFINE_string('test_path', './data/test.csv', 'Path of test dataset on the remote datastore.')
+flags.DEFINE_string('classes_path', './data/classes.txt', 'Path of classes definition file on the remote datastore.')
+flags.DEFINE_string('export_dir', './outputs', 'The directory to export the model to')
 flags.DEFINE_integer('steps_per_epoch', 150, 'Number of steps per epoch.')
 flags.DEFINE_integer('num_epochs', 3, 'Number of epochs to train for.', lower_bound=0)
-flags.DEFINE_string('data_dir', None, 'Root path of directory where data is stored.')
-flags.DEFINE_string('export_dir', './outputs', 'The directory to export the model to')
+flags.DEFINE_integer('batch_size', 32, 'Batch size for training.', lower_bound=0)
+flags.DEFINE_integer('max_seq_length', 128, 'Maximum sequence length of input sentences.')
+flags.DEFINE_float('learning_rate', 3e-5, 'Learning rate for training.')
 
 
 class AmlLogger(tf.keras.callbacks.Callback):
@@ -55,7 +59,7 @@ def encode_example(example, tokenizer, max_seq_length, labels_map):
         add_special_tokens=True,
         max_length=max_seq_length
     )
-    input_ids, token_type_ids = inputs["input_ids"], inputs["token_type_ids"]
+    input_ids, token_type_ids = inputs['input_ids'], inputs['token_type_ids']
 
     # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
     attention_mask = [1] * len(input_ids)
@@ -138,17 +142,17 @@ def get_dataset(filename, tokenizer, max_seq_length, labels_map):
 def main(_):
 
     # Get labels
-    labels = pd.read_csv(os.path.join(FLAGS.data_dir,'classes.txt'), header=None)
+    labels = pd.read_csv(FLAGS.classes_path, header=None)
     labels_map = { row[0]:index for index, row in labels.iterrows() }
 
     # Load dataset, tokenizer, model from pretrained model/vocabulary
-    tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
-    model = TFBertForMultiClassification.from_pretrained('bert-base-cased', num_labels=len(labels_map))
+    tokenizer = BertTokenizer.from_pretrained(FLAGS.pretrained_model)
+    model = TFBertForMultiClassification.from_pretrained(FLAGS.pretrained_model, num_labels=len(labels_map))
 
     # Load dataset, shuffle data, and put into batchs
-    train_dataset = get_dataset(os.path.join(FLAGS.data_dir, 'train.csv'), tokenizer, FLAGS.max_seq_length, labels_map)
-    valid_dataset = get_dataset(os.path.join(FLAGS.data_dir, 'valid.csv'), tokenizer, FLAGS.max_seq_length, labels_map)
-    test_dataset = get_dataset(os.path.join(FLAGS.data_dir, 'test.csv'), tokenizer, FLAGS.max_seq_length, labels_map)
+    train_dataset = get_dataset(FLAGS.training_path, tokenizer, FLAGS.max_seq_length, labels_map)
+    valid_dataset = get_dataset(FLAGS.validation_path, tokenizer, FLAGS.max_seq_length, labels_map)
+    test_dataset = get_dataset(FLAGS.test_path, tokenizer, FLAGS.max_seq_length, labels_map)
 
     train_dataset = train_dataset.shuffle(100).repeat().batch(FLAGS.batch_size)
     valid_dataset = valid_dataset.batch(FLAGS.batch_size)
@@ -179,5 +183,4 @@ def main(_):
 
 if __name__ == '__main__':
 
-    flags.mark_flag_as_required('data_dir')
     app.run(main)
